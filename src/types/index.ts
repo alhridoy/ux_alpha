@@ -18,7 +18,8 @@ export type ActionType =
   | 'scroll'
   | 'hover'
   | 'navigate'
-  | 'wait';
+  | 'wait'
+  | 'error';
 
 export type AgentAction = {
   id: string;
@@ -49,4 +50,14 @@ export type Interview = {
     question: string;
     answer: string;
   }[];
+};
+
+// Configuration types for the PersonaGenerator
+export type PersonaGeneratorConfig = {
+  count?: number;
+  ageRange?: string;
+  incomeDistribution?: string;
+  educationLevels?: string[];
+  shoppingInterests?: string[];
+  techLiteracy?: string;
 };

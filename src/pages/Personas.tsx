@@ -8,16 +8,26 @@ import { Plus, Search, Filter, UserPlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { samplePersonas } from '@/data/sampleData';
 import { Persona } from '@/types';
+import GeneratePersonaModal from '@/components/personas/GeneratePersonaModal';
 
 const Personas = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
+  const [personas, setPersonas] = useState<Persona[]>(samplePersonas);
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   
-  const filteredPersonas = samplePersonas.filter((persona) => 
+  const filteredPersonas = personas.filter((persona) => 
     persona.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     persona.occupation.toLowerCase().includes(searchTerm.toLowerCase()) ||
     persona.techExperience.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handlePersonasGenerated = (newPersonas: Persona[]) => {
+    setPersonas([...personas, ...newPersonas]);
+    if (newPersonas.length > 0) {
+      setSelectedPersona(newPersonas[0]);
+    }
+  };
   
   return (
     <Layout>
@@ -29,7 +39,10 @@ const Personas = () => {
               Create and manage virtual users with diverse characteristics
             </p>
           </div>
-          <Button className="bg-uxagent-purple hover:bg-uxagent-dark-purple">
+          <Button 
+            className="bg-uxagent-purple hover:bg-uxagent-dark-purple"
+            onClick={() => setIsGenerateModalOpen(true)}
+          >
             <UserPlus className="h-4 w-4 mr-2" />
             New Persona
           </Button>
@@ -85,7 +98,11 @@ const Personas = () => {
                   <Filter className="h-3.5 w-3.5 mr-1.5" />
                   Filter
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsGenerateModalOpen(true)}
+                >
                   <Plus className="h-3.5 w-3.5 mr-1.5" />
                   Generate
                 </Button>
@@ -168,7 +185,7 @@ const Personas = () => {
                 <p className="text-muted-foreground text-center max-w-md mb-4">
                   Choose a persona from the library to view details or create a new one
                 </p>
-                <Button>
+                <Button onClick={() => setIsGenerateModalOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create New Persona
                 </Button>
@@ -177,6 +194,12 @@ const Personas = () => {
           </div>
         </div>
       </div>
+
+      <GeneratePersonaModal 
+        open={isGenerateModalOpen} 
+        onOpenChange={setIsGenerateModalOpen} 
+        onPersonasGenerated={handlePersonasGenerated} 
+      />
     </Layout>
   );
 };
