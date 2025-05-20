@@ -1,13 +1,25 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { ActionType, AgentAction, Persona, SimulationResult } from '@/types';
+import { llmService } from './llmService';
 
-// This would be replaced with an actual API call to OpenAI or another LLM provider
+// Generate agent actions using the LLM service if configured, otherwise use mock data
 const generateAgentActions = async (
   persona: Persona,
   webUrl: string,
   task: string
 ): Promise<AgentAction[]> => {
+  // If the LLM service is configured, use it to generate real actions
+  if (llmService.isConfigured()) {
+    try {
+      const actions = await llmService.simulateInteraction(persona, webUrl, task);
+      return actions;
+    } catch (error) {
+      console.error("Error from LLM service:", error);
+      console.log("Falling back to mock data generation");
+    }
+  }
+  
+  // Fall back to mock data if the LLM service fails or isn't configured
   // Simulate API call delay
   await new Promise(resolve => setTimeout(resolve, 1000));
   
@@ -128,27 +140,51 @@ export const runSimulation = async (
     const actions = await generateAgentActions(persona, webUrl, task);
     
     // In a real implementation, this would run a full simulation with the browser connector
-    // and collect detailed results. For now, we'll generate mock data.
-    
     const lastAction = actions[actions.length - 1];
-    const isSuccessful = lastAction.type !== 'error' && Math.random() > 0.2;
+    const isSuccessful = lastAction?.type !== 'error' && Math.random() > 0.2;
     
     // Calculate total duration from first to last action
-    const durationSeconds = Math.round((actions[actions.length - 1].timestamp - actions[0].timestamp) / 1000);
+    const durationSeconds = Math.round(
+      (actions[actions.length - 1]?.timestamp - actions[0]?.timestamp) / 1000
+    ) || Math.floor(Math.random() * 120) + 30;
     
-    // Generate reflections based on the persona and task
-    const reflections = [
-      `As ${persona.name} with ${persona.techExperience.toLowerCase()} tech experience, I ${isSuccessful ? 'was able to complete' : 'struggled with'} this task.`,
-      `The website's layout was ${Math.random() > 0.5 ? 'intuitive' : 'confusing'} for someone with my background in ${persona.occupation}.`,
-      `My ${persona.traits.join(' and ')} traits influenced how I approached the navigation.`
-    ];
+    let reflections: string[] = [];
+    let wonderings: string[] = [];
     
-    // Generate wonderings (thoughts about the experience)
-    const wonderings = [
-      `I wonder if other users would find the ${Math.random() > 0.5 ? 'search functionality' : 'navigation'} as ${Math.random() > 0.5 ? 'helpful' : 'confusing'} as I did?`,
-      `Would someone with ${persona.techExperience === 'Beginner' ? 'more' : 'less'} technical experience have an easier time?`,
-      `How much does my background as a ${persona.occupation} affect my perception of this interface?`
-    ];
+    // Use the LLM service to generate reflections if available
+    if (llmService.isConfigured()) {
+      try {
+        const partialResult: Partial<SimulationResult> = {
+          persona,
+          webUrl,
+          task,
+          taskCompleted: isSuccessful,
+          actions
+        };
+        const results = await llmService.generateReflections(partialResult);
+        reflections = results.reflections;
+        wonderings = results.wonderings;
+      } catch (error) {
+        console.error("Error generating reflections:", error);
+      }
+    }
+    
+    // If we couldn't get reflections from the LLM, use mock data
+    if (reflections.length === 0) {
+      // Generate reflections based on the persona and task
+      const reflections = [
+        `As ${persona.name} with ${persona.techExperience.toLowerCase()} tech experience, I ${isSuccessful ? 'was able to complete' : 'struggled with'} this task.`,
+        `The website's layout was ${Math.random() > 0.5 ? 'intuitive' : 'confusing'} for someone with my background in ${persona.occupation}.`,
+        `My ${persona.traits.join(' and ')} traits influenced how I approached the navigation.`
+      ];
+      
+      // Generate wonderings (thoughts about the experience)
+      const wonderings = [
+        `I wonder if other users would find the ${Math.random() > 0.5 ? 'search functionality' : 'navigation'} as ${Math.random() > 0.5 ? 'helpful' : 'confusing'} as I did?`,
+        `Would someone with ${persona.techExperience === 'Beginner' ? 'more' : 'less'} technical experience have an easier time?`,
+        `How much does my background as a ${persona.occupation} affect my perception of this interface?`
+      ];
+    }
     
     // Create the simulation result
     const result: SimulationResult = {
@@ -171,8 +207,55 @@ export const runSimulation = async (
   }
 };
 
-// In a real implementation, this would call an LLM API to generate personas
+// Generate personas using the LLM service if available, otherwise use mock data
 export const generatePersonas = async (count: number = 1): Promise<Persona[]> => {
+  // If the LLM service is configured, try to use it
+  if (llmService.isConfigured()) {
+    try {
+      const personas: Persona[] = [];
+      
+      for (let i = 0; i < count; i++) {
+        const prompt = `Generate a realistic user persona for UX testing with the following properties:
+          - Full name
+          - Age (between 18 and 75)
+          - Gender
+          - Occupation
+          - Tech experience level (Beginner, Intermediate, or Advanced)
+          - 2-4 personality traits
+          - 2-4 user goals when using websites
+          - 2-4 pain points when using technology
+          
+          Return as a JSON object matching the Persona type.`;
+          
+        const persona = await llmService.generatePersona(prompt);
+        if (persona) {
+          personas.push({
+            ...persona,
+            id: uuidv4(),
+            // Assign a random profile image
+            profileImage: [
+              'https://images.unsplash.com/photo-1494790108377-be9c29b29330',
+              'https://images.unsplash.com/photo-1599566150163-29194dcaad36',
+              'https://images.unsplash.com/photo-1552058544-f2b08422138a',
+              'https://images.unsplash.com/photo-1569913486515-b74bf7751574',
+              'https://images.unsplash.com/photo-1580489944761-15a19d654956',
+            ][Math.floor(Math.random() * 5)]
+          });
+        }
+      }
+      
+      if (personas.length > 0) {
+        return personas;
+      }
+      
+      // Fall back to mock data if some personas couldn't be generated
+      console.log("Some personas couldn't be generated by the LLM service, using mock data");
+    } catch (error) {
+      console.error("Error generating personas with LLM:", error);
+      console.log("Falling back to mock data generation");
+    }
+  }
+  
   // Simulate API call delay
   await new Promise(resolve => setTimeout(resolve, 2000));
   
