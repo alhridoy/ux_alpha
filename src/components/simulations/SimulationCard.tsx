@@ -34,7 +34,7 @@ const SimulationCard = ({ simulation, onClick }: SimulationCardProps) => {
               </p>
             </div>
           </div>
-          <Badge variant={simulation.taskCompleted ? "success" : "destructive"}>
+          <Badge variant={simulation.taskCompleted ? "default" : "destructive"} className={simulation.taskCompleted ? "bg-green-500 hover:bg-green-600" : ""}>
             {simulation.taskCompleted ? (
               <CheckCircle className="h-3 w-3 mr-1" />
             ) : (

@@ -11,7 +11,8 @@ import {
   FileQuestion, 
   BrainCircuit,
   Eye,
-  PauseCircle
+  PauseCircle,
+  MessageSquare
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,7 +77,7 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle className="text-xl">Simulation Report</CardTitle>
-                <Badge variant={simulation.taskCompleted ? "success" : "destructive"} className="text-sm">
+                <Badge variant={simulation.taskCompleted ? "default" : "destructive"} className={simulation.taskCompleted ? "bg-green-500 hover:bg-green-500" : ""}>
                   {simulation.taskCompleted ? (
                     <CheckCircle className="h-3.5 w-3.5 mr-1" />
                   ) : (
