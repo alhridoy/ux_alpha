@@ -21,6 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SimulationResult, AgentAction } from '@/types';
 import { formatDistanceToNow } from 'date-fns';
+import BrowserAutomationView from './BrowserAutomationView';
 
 type SimulationDetailProps = {
   simulation: SimulationResult;
@@ -70,6 +71,12 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
           Export Results
         </Button>
       </div>
+      
+      {/* Add the new BrowserAutomationView component at the top */}
+      <BrowserAutomationView 
+        actions={simulation.actions} 
+        webUrl={simulation.webUrl} 
+      />
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
