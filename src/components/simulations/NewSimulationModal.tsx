@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Persona, SimulationResult } from '@/types';
+import { llmService } from '@/services/llmService';
+import { backendService } from '@/services/backendService';
 
 type NewSimulationModalProps = {
   open: boolean;
@@ -45,42 +47,85 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
     
     setIsRunning(true);
     try {
-      // In a real implementation, this would call your LLM Agent API
-      // For now, we'll simulate the process with a delay
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Check if we should use the backend or the mock implementation
+      const backendConfigured = await backendService.getConfiguredProviders();
       
-      // Create a mock simulation result
-      const mockSimulation: SimulationResult = {
-        id: uuidv4(),
-        persona: selectedPersona,
-        webUrl: data.webUrl,
-        task: data.task,
-        taskCompleted: Math.random() > 0.3, // Random success/failure
-        durationSeconds: Math.floor(Math.random() * 120) + 30, // 30-150 seconds
-        actions: [
-          {
-            id: uuidv4(),
-            timestamp: Date.now(),
-            type: 'navigate',
-            target: data.webUrl,
-            reasoning: `Navigating to the provided URL to start the task: ${data.task}`
-          },
-          // In a real implementation, this would contain the full action trace
-        ],
-        reflections: [
-          `As ${selectedPersona.name}, I approached this task with my ${selectedPersona.techExperience.toLowerCase()} level of tech experience.`,
-          "The website layout was intuitive, though I did struggle with finding some elements.",
-        ],
-        wonderings: [
-          "I wonder if other users would find this navigation structure confusing?",
-          "Would a more prominent search bar improve the experience?",
-        ],
-        timestamp: Date.now(),
-      };
-      
-      onSimulationCreated(mockSimulation);
-      toast.success("Simulation completed successfully!");
-      onOpenChange(false);
+      if (backendConfigured.length > 0) {
+        // Use the backend service to run the simulation
+        const simulationId = await backendService.startSimulation(
+          data.personaId,
+          data.webUrl,
+          data.task
+        );
+        
+        if (!simulationId) {
+          toast.error("Failed to start simulation");
+          return;
+        }
+        
+        // Poll for simulation status
+        let completed = false;
+        let result = null;
+        
+        while (!completed) {
+          const status = await backendService.getSimulationStatus(simulationId);
+          
+          if (status.status === "completed") {
+            completed = true;
+            result = await backendService.getSimulationResult(simulationId);
+          } else if (status.status === "failed") {
+            toast.error(`Simulation failed: ${status.error}`);
+            setIsRunning(false);
+            return;
+          }
+          
+          // Wait before polling again
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        
+        if (result) {
+          onSimulationCreated(result);
+          toast.success("Simulation completed successfully!");
+          onOpenChange(false);
+        }
+      } else {
+        // Use the mock implementation from our service
+        // In a real implementation, this would call your LLM Agent API
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Create a mock simulation result
+        const mockSimulation: SimulationResult = {
+          id: uuidv4(),
+          persona: selectedPersona,
+          webUrl: data.webUrl,
+          task: data.task,
+          taskCompleted: Math.random() > 0.3, // Random success/failure
+          durationSeconds: Math.floor(Math.random() * 120) + 30, // 30-150 seconds
+          actions: [
+            {
+              id: uuidv4(),
+              timestamp: Date.now(),
+              type: 'navigate',
+              target: data.webUrl,
+              reasoning: `Navigating to the provided URL to start the task: ${data.task}`
+            },
+            // In a real implementation, this would contain the full action trace
+          ],
+          reflections: [
+            `As ${selectedPersona.name}, I approached this task with my ${selectedPersona.techExperience.toLowerCase()} level of tech experience.`,
+            "The website layout was intuitive, though I did struggle with finding some elements.",
+          ],
+          wonderings: [
+            "I wonder if other users would find this navigation structure confusing?",
+            "Would a more prominent search bar improve the experience?",
+          ],
+          timestamp: Date.now(),
+        };
+        
+        onSimulationCreated(mockSimulation);
+        toast.success("Simulation completed successfully!");
+        onOpenChange(false);
+      }
     } catch (error) {
       console.error("Error running simulation:", error);
       toast.error("Failed to run simulation. Please try again.");
