@@ -1,18 +1,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Loader2, Globe } from 'lucide-react';
+import { Loader2, Globe, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTabs, DialogTab } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Persona, SimulationResult } from '@/types';
 import { llmService } from '@/services/llmService';
 import { backendService } from '@/services/backendService';
+import DataExtractionForm from './DataExtractionForm';
 
 type NewSimulationModalProps = {
   open: boolean;
@@ -31,6 +33,8 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
   const [isRunning, setIsRunning] = useState(false);
   const [automationType, setAutomationType] = useState<'selenium' | 'stagehand' | null>(null);
   const [isStagehandConfigured, setIsStagehandConfigured] = useState(false);
+  const [activeTab, setActiveTab] = useState<'simulation' | 'extraction'>('simulation');
+  const [webUrl, setWebUrl] = useState('');
   
   const form = useForm<SimulationFormValues>({
     defaultValues: {
@@ -61,6 +65,9 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
   }, [open]);
 
   const handleSubmit = async (data: SimulationFormValues) => {
+    // Update shared webUrl
+    setWebUrl(data.webUrl);
+    
     const selectedPersona = personas.find(p => p.id === data.personaId);
     if (!selectedPersona) {
       toast.error("Please select a persona first");
@@ -169,13 +176,23 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
     }
   };
 
+  const handleWebUrlChange = (url: string) => {
+    form.setValue('webUrl', url);
+    setWebUrl(url);
+  };
+
+  const handleExtractedData = (data: any) => {
+    toast.success("Data extracted successfully!");
+    // You can add additional logic here to use the extracted data
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
-          <DialogTitle>Create New Simulation</DialogTitle>
+          <DialogTitle>Browser Automation</DialogTitle>
           <DialogDescription>
-            Configure a simulated user test with an AI persona
+            Configure browser automation with AI personas or extract data
             {automationType === 'stagehand' && (
               <span className="block mt-1 text-xs bg-green-50 text-green-700 p-1 rounded">
                 Using Stagehand AI-powered browser automation
@@ -184,109 +201,146 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="personaId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Select Persona</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'simulation' | 'extraction')}>
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="simulation">Run Simulation</TabsTrigger>
+            <TabsTrigger value="extraction">Extract Data</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="simulation">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="personaId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Persona</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a persona for this simulation" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {personas.length === 0 ? (
+                            <SelectItem value="no-personas" disabled>
+                              No personas available. Create one first.
+                            </SelectItem>
+                          ) : (
+                            personas.map((persona) => (
+                              <SelectItem key={persona.id} value={persona.id}>
+                                {persona.name} - {persona.age}, {persona.occupation}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Choose which persona will perform this simulation
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="webUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website URL</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="https://example.com" 
+                          {...field} 
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleWebUrlChange(e.target.value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Enter the URL of the website to test
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="task"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Task Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Find and purchase a red sweater in size medium" 
+                          className="min-h-[100px]"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Describe the task you want the persona to complete
+                        {automationType === 'stagehand' && (
+                          <span className="block mt-1 text-xs text-green-600">
+                            Stagehand AI will understand natural language task descriptions
+                          </span>
+                        )}
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={isRunning || personas.length === 0} 
+                    className="bg-uxagent-purple hover:bg-uxagent-dark-purple"
                   >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a persona for this simulation" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {personas.length === 0 ? (
-                        <SelectItem value="no-personas" disabled>
-                          No personas available. Create one first.
-                        </SelectItem>
-                      ) : (
-                        personas.map((persona) => (
-                          <SelectItem key={persona.id} value={persona.id}>
-                            {persona.name} - {persona.age}, {persona.occupation}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Choose which persona will perform this simulation
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="webUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Website URL</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://example.com" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Enter the URL of the website to test
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="task"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Task Description</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Find and purchase a red sweater in size medium" 
-                      className="min-h-[100px]"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Describe the task you want the persona to complete
-                    {automationType === 'stagehand' && (
-                      <span className="block mt-1 text-xs text-green-600">
-                        Stagehand AI will understand natural language task descriptions
-                      </span>
+                    {isRunning ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Running Simulation...
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="mr-2 h-4 w-4" />
+                        Run Simulation
+                      </>
                     )}
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isRunning || personas.length === 0} 
-                className="bg-uxagent-purple hover:bg-uxagent-dark-purple"
-              >
-                {isRunning ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Running Simulation...
-                  </>
-                ) : (
-                  <>
-                    <Globe className="mr-2 h-4 w-4" />
-                    Run Simulation
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </TabsContent>
+          
+          <TabsContent value="extraction">
+            <div className="space-y-4">
+              <FormItem>
+                <FormLabel>Website URL</FormLabel>
+                <Input 
+                  placeholder="https://example.com"
+                  value={webUrl}
+                  onChange={(e) => setWebUrl(e.target.value)}
+                />
+                <FormDescription>
+                  Enter the URL of the website to extract data from
+                </FormDescription>
+              </FormItem>
+              
+              <DataExtractionForm 
+                webUrl={webUrl}
+                onDataExtracted={handleExtractedData} 
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

@@ -267,6 +267,38 @@ export class BackendService {
       return false;
     }
   }
+
+  /**
+   * Extract data from a website using Stagehand
+   * @param url - The URL to extract data from
+   * @param instruction - Instruction for what data to extract
+   * @param schemaDefinition - JSON schema definition for the data structure
+   */
+  async extractWithStagehand(url: string, instruction: string, schemaDefinition: any): Promise<any> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/stagehand/extract`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url,
+          instruction,
+          schemaDefinition,
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.extractedData;
+    } catch (error) {
+      console.error('Error extracting data with Stagehand:', error);
+      throw error;
+    }
+  }
 }
 
 // Export a singleton instance

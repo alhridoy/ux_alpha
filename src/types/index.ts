@@ -61,3 +61,30 @@ export type PersonaGeneratorConfig = {
   shoppingInterests?: string[];
   techLiteracy?: string;
 };
+
+// Schema types for data extraction
+export type ExtractionSchemaField = {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  description?: string;
+};
+
+export type ExtractionSchema = {
+  type: 'object';
+  properties: Record<string, {
+    type: string;
+    description?: string;
+  }>;
+  required: string[];
+};
+
+export type ExtractionRequest = {
+  url: string;
+  instruction: string;
+  schemaDefinition: ExtractionSchema;
+};
+
+export type ExtractionResult = {
+  extractedData: any;
+  executionTime: number;
+};
