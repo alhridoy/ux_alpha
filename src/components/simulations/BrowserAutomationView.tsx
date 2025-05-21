@@ -4,7 +4,6 @@ import { AgentAction } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronUp, ChevronDown, PlayCircle, Laptop, ExternalLink, Key } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { backendService } from '@/services/backendService';
 import { stagehandConnector } from '@/services/stagehandConnector';
@@ -18,7 +17,6 @@ interface BrowserAutomationViewProps {
 
 const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, webUrl }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [automationType, setAutomationType] = useState<'selenium' | 'stagehand'>('selenium');
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [isStagehandConfigured, setIsStagehandConfigured] = useState(false);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
@@ -26,48 +24,18 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
   const [isSubmittingKey, setIsSubmittingKey] = useState(false);
 
   useEffect(() => {
-    // Get the current browser automation type when component mounts
-    const getBrowserInfo = async () => {
-      const type = await backendService.getBrowserAutomationType();
-      if (type) {
-        setAutomationType(type);
+    // Check if Stagehand is configured
+    const checkStagehandConfig = async () => {
+      try {
+        const stagehandConfigured = await stagehandConnector.isConfigured();
+        setIsStagehandConfigured(stagehandConfigured);
+      } catch (error) {
+        console.error('Error checking Stagehand configuration:', error);
       }
-      
-      // Check if Stagehand is configured
-      const stagehandConfigured = await stagehandConnector.isConfigured();
-      setIsStagehandConfigured(stagehandConfigured);
     };
     
-    getBrowserInfo();
+    checkStagehandConfig();
   }, []);
-
-  const handleAutomationTypeChange = async (value: string) => {
-    if (value !== 'selenium' && value !== 'stagehand') return;
-    
-    // If selecting Stagehand and it's not configured, show API key dialog
-    if (value === 'stagehand' && !isStagehandConfigured) {
-      setIsApiKeyDialogOpen(true);
-      return;
-    }
-    
-    setIsConfiguring(true);
-    
-    try {
-      const success = await backendService.configureBrowserAutomation(value);
-      
-      if (success) {
-        setAutomationType(value);
-        toast.success(`Browser automation set to ${value}`);
-      } else {
-        toast.error(`Failed to set browser automation to ${value}`);
-      }
-    } catch (error) {
-      console.error('Error setting browser automation:', error);
-      toast.error('An error occurred while configuring browser automation');
-    } finally {
-      setIsConfiguring(false);
-    }
-  };
 
   const handleApiKeySubmit = async () => {
     if (!apiKey.trim()) {
@@ -84,13 +52,7 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
       if (success) {
         setIsStagehandConfigured(true);
         setIsApiKeyDialogOpen(false);
-        
-        // Now set the automation type to Stagehand
-        const automationSuccess = await backendService.configureBrowserAutomation('stagehand');
-        if (automationSuccess) {
-          setAutomationType('stagehand');
-          toast.success('Browser automation set to Stagehand');
-        }
+        toast.success('Stagehand API key configured successfully');
       }
     } catch (error) {
       console.error('Error configuring Stagehand API key:', error);
@@ -129,19 +91,9 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
               <CardTitle>Browser Automation</CardTitle>
             </div>
             <div className="flex items-center gap-2">
-              <Select
-                value={automationType}
-                onValueChange={handleAutomationTypeChange}
-                disabled={isConfiguring}
-              >
-                <SelectTrigger className="w-[160px] h-8">
-                  <SelectValue placeholder="Select engine" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="selenium">Selenium</SelectItem>
-                  <SelectItem value="stagehand">Stagehand (AI)</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="text-sm font-medium text-uxagent-purple">
+                Using Stagehand AI
+              </div>
               
               <Button 
                 variant="ghost" 
@@ -188,34 +140,32 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
                 <div className="text-center text-muted-foreground">
                   <Laptop className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
                   <p>Browser view will appear here during live simulations</p>
-                  <p className="text-sm">Using {automationType === 'stagehand' ? 'Stagehand (AI-powered)' : 'Selenium'} for automation</p>
-                  {automationType === 'stagehand' && (
-                    <div className="mt-3">
-                      <p className="text-xs text-uxagent-purple mb-1">
-                        Stagehand uses its own AI to handle browser interactions
-                      </p>
-                      <a 
-                        href="https://docs.stagehand.dev" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-xs flex items-center justify-center gap-1 text-uxagent-purple hover:underline"
+                  <p className="text-sm">Using Stagehand AI-powered browser automation</p>
+                  <div className="mt-3">
+                    <p className="text-xs text-uxagent-purple mb-1">
+                      Stagehand uses its own AI to handle browser interactions
+                    </p>
+                    <a 
+                      href="https://docs.stagehand.dev" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs flex items-center justify-center gap-1 text-uxagent-purple hover:underline"
+                    >
+                      Learn more about Stagehand
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                    {!isStagehandConfigured && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setIsApiKeyDialogOpen(true)}
+                        className="mt-2"
                       >
-                        Learn more about Stagehand
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                      {!isStagehandConfigured && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => setIsApiKeyDialogOpen(true)}
-                          className="mt-2"
-                        >
-                          <Key className="h-3 w-3 mr-1" />
-                          Configure Stagehand API Key
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                        <Key className="h-3 w-3 mr-1" />
+                        Configure Stagehand API Key
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -224,7 +174,7 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
               <div className="flex justify-between items-center p-3 border-b">
                 <h3 className="font-semibold">Action Log</h3>
                 <div className="text-xs text-muted-foreground">
-                  {automationType === 'stagehand' ? 'Using Stagehand observe + act pattern' : 'Using Selenium WebDriver'}
+                  Using Stagehand observe + act pattern
                 </div>
               </div>
               <div className="p-3 space-y-3 max-h-[300px] overflow-y-auto">

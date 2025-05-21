@@ -57,10 +57,10 @@ export class StagehandConnector {
     }
     
     try {
-      // This would call a backend endpoint to initialize Stagehand
-      // For now, we'll just set a flag
-      this.isInitialized = true;
-      return true;
+      // Initialize Stagehand through the backend
+      const result = await backendService.initializeStagehand();
+      this.isInitialized = result.success;
+      return result.success;
     } catch (error) {
       console.error('Error initializing Stagehand:', error);
       toast.error("Failed to initialize Stagehand");
@@ -78,13 +78,8 @@ export class StagehandConnector {
     }
     
     try {
-      // This would call a backend endpoint to navigate using Stagehand
-      // For now, we'll create a mock response
-      return {
-        url,
-        success: true,
-        message: `Navigated to ${url}`,
-      };
+      const result = await backendService.stagehandNavigate(url);
+      return result;
     } catch (error) {
       console.error('Error navigating with Stagehand:', error);
       return {
@@ -104,17 +99,8 @@ export class StagehandConnector {
     }
     
     try {
-      // This would call a backend endpoint to execute the action
-      // The backend would use page.observe() and page.act()
-      // For now, we'll create a mock response
-      return {
-        success: true,
-        action: {
-          type: 'action',
-          instruction,
-          description: `Executed: ${instruction}`,
-        },
-      };
+      const result = await backendService.stagehandExecuteAction(instruction);
+      return result;
     } catch (error) {
       console.error('Error executing action with Stagehand:', error);
       return {
@@ -135,8 +121,6 @@ export class StagehandConnector {
     }
     
     try {
-      // This would call a backend endpoint to extract data
-      // For now, we'll call the backendService extractWithStagehand method
       return await backendService.extractWithStagehand(
         "current_page", // Placeholder, backend should know the current page
         instruction,
@@ -157,9 +141,11 @@ export class StagehandConnector {
     }
     
     try {
-      // This would call a backend endpoint to close the Stagehand session
-      this.isInitialized = false;
-      return true;
+      const result = await backendService.closeStagehand();
+      if (result.success) {
+        this.isInitialized = false;
+      }
+      return result.success;
     } catch (error) {
       console.error('Error closing Stagehand session:', error);
       return false;

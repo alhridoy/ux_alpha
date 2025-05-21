@@ -198,9 +198,8 @@ export class BackendService {
 
   /**
    * Configure browser automation type
-   * @param type - The automation type ('selenium' or 'stagehand')
    */
-  async configureBrowserAutomation(type: 'selenium' | 'stagehand'): Promise<boolean> {
+  async configureBrowserAutomation(type: 'stagehand'): Promise<boolean> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/config/browser`, {
         method: 'POST',
@@ -221,11 +220,11 @@ export class BackendService {
   /**
    * Get the current browser automation configuration
    */
-  async getBrowserAutomationType(): Promise<'selenium' | 'stagehand' | null> {
+  async getBrowserAutomationType(): Promise<'stagehand' | null> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/config/browser`);
       const data = await response.json();
-      return data.type || null;
+      return data.type === 'stagehand' ? 'stagehand' : null;
     } catch (error) {
       console.error('Error getting browser automation type:', error);
       return null;
@@ -269,6 +268,70 @@ export class BackendService {
   }
 
   /**
+   * Initialize Stagehand browser session
+   */
+  async initializeStagehand(): Promise<{success: boolean, message?: string}> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/stagehand/init`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error initializing Stagehand:', error);
+      return { success: false, message: String(error) };
+    }
+  }
+
+  /**
+   * Navigate to a URL using Stagehand
+   * @param url - The URL to navigate to
+   */
+  async stagehandNavigate(url: string): Promise<any> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/stagehand/navigate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url })
+      });
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error navigating with Stagehand:', error);
+      return { success: false, message: String(error) };
+    }
+  }
+
+  /**
+   * Execute an action using Stagehand
+   * @param instruction - Natural language instruction to execute
+   */
+  async stagehandExecuteAction(instruction: string): Promise<any> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/stagehand/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ instruction })
+      });
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error executing action with Stagehand:', error);
+      return { success: false, message: String(error) };
+    }
+  }
+
+  /**
    * Extract data from a website using Stagehand
    * @param url - The URL to extract data from
    * @param instruction - Instruction for what data to extract
@@ -297,6 +360,26 @@ export class BackendService {
     } catch (error) {
       console.error('Error extracting data with Stagehand:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Close Stagehand browser session
+   */
+  async closeStagehand(): Promise<{success: boolean, message?: string}> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/stagehand/close`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error closing Stagehand session:', error);
+      return { success: false, message: String(error) };
     }
   }
 }
