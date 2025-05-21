@@ -231,6 +231,42 @@ export class BackendService {
       return null;
     }
   }
+
+  /**
+   * Configure Stagehand API key
+   * @param key - The Stagehand API key
+   */
+  async setStagehandApiKey(key: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/config/stagehand`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ key }),
+      });
+      
+      const data = await response.json();
+      return data.success === true;
+    } catch (error) {
+      console.error('Error setting Stagehand API key:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if Stagehand API key is configured
+   */
+  async isStagehandConfigured(): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/config/stagehand/status`);
+      const data = await response.json();
+      return data.configured === true;
+    } catch (error) {
+      console.error('Error checking Stagehand configuration:', error);
+      return false;
+    }
+  }
 }
 
 // Export a singleton instance

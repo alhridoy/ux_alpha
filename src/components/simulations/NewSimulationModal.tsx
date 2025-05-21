@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Loader2, Globe } from 'lucide-react';
 import { toast } from 'sonner';
@@ -29,6 +29,8 @@ type SimulationFormValues = {
 
 const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated }: NewSimulationModalProps) => {
   const [isRunning, setIsRunning] = useState(false);
+  const [automationType, setAutomationType] = useState<'selenium' | 'stagehand' | null>(null);
+  const [isStagehandConfigured, setIsStagehandConfigured] = useState(false);
   
   const form = useForm<SimulationFormValues>({
     defaultValues: {
@@ -37,6 +39,26 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
       task: '',
     }
   });
+
+  useEffect(() => {
+    if (open) {
+      const checkAutomationType = async () => {
+        const type = await backendService.getBrowserAutomationType();
+        setAutomationType(type);
+        
+        if (type === 'stagehand') {
+          const stagehandConfigured = await backendService.isStagehandConfigured();
+          setIsStagehandConfigured(stagehandConfigured);
+          
+          if (!stagehandConfigured) {
+            toast.warning("Stagehand is selected but not configured. The simulation may not run properly.");
+          }
+        }
+      };
+      
+      checkAutomationType();
+    }
+  }, [open]);
 
   const handleSubmit = async (data: SimulationFormValues) => {
     const selectedPersona = personas.find(p => p.id === data.personaId);
@@ -93,7 +115,7 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
         // In a real implementation, this would call your LLM Agent API
         await new Promise(resolve => setTimeout(resolve, 3000));
         
-        // Create a mock simulation result
+        // Create a mock simulation result with automation type info
         const mockSimulation: SimulationResult = {
           id: uuidv4(),
           persona: selectedPersona,
@@ -109,15 +131,28 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
               target: data.webUrl,
               reasoning: `Navigating to the provided URL to start the task: ${data.task}`
             },
+            {
+              id: uuidv4(),
+              timestamp: Date.now() + 2000,
+              type: 'click',
+              target: automationType === 'stagehand' ? 'AI identified element' : 'button_search',
+              reasoning: automationType === 'stagehand' 
+                ? 'Using Stagehand AI to identify and click the search button' 
+                : 'Looking for the search button based on its element ID'
+            },
             // In a real implementation, this would contain the full action trace
           ],
           reflections: [
             `As ${selectedPersona.name}, I approached this task with my ${selectedPersona.techExperience.toLowerCase()} level of tech experience.`,
-            "The website layout was intuitive, though I did struggle with finding some elements.",
+            automationType === 'stagehand' 
+              ? "The Stagehand AI helped me navigate the site more naturally, focusing on what elements do rather than their technical details."
+              : "The website layout was intuitive, though I did struggle with finding some elements.",
           ],
           wonderings: [
             "I wonder if other users would find this navigation structure confusing?",
-            "Would a more prominent search bar improve the experience?",
+            automationType === 'stagehand'
+              ? "Would the AI automation handle a more complex workflow as effectively?"
+              : "Would a more prominent search bar improve the experience?",
           ],
           timestamp: Date.now(),
         };
@@ -141,6 +176,11 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
           <DialogTitle>Create New Simulation</DialogTitle>
           <DialogDescription>
             Configure a simulated user test with an AI persona
+            {automationType === 'stagehand' && (
+              <span className="block mt-1 text-xs bg-green-50 text-green-700 p-1 rounded">
+                Using Stagehand AI-powered browser automation
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -213,6 +253,11 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
                   </FormControl>
                   <FormDescription>
                     Describe the task you want the persona to complete
+                    {automationType === 'stagehand' && (
+                      <span className="block mt-1 text-xs text-green-600">
+                        Stagehand AI will understand natural language task descriptions
+                      </span>
+                    )}
                   </FormDescription>
                 </FormItem>
               )}
