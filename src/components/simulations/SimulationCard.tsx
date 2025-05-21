@@ -15,6 +15,16 @@ type SimulationCardProps = {
 const SimulationCard = ({ simulation, onClick }: SimulationCardProps) => {
   const formattedTime = formatDistanceToNow(simulation.timestamp, { addSuffix: true });
   
+  // Safely extract hostname from URL
+  const getHostname = (url: string): string => {
+    try {
+      return new URL(url).hostname;
+    } catch (error) {
+      // Return the URL as is if it's invalid, or a placeholder if it's empty
+      return url || 'No URL provided';
+    }
+  };
+  
   return (
     <Card className="hover:border-uxagent-purple transition-colors cursor-pointer" onClick={onClick}>
       <CardHeader className="pb-2">
@@ -47,7 +57,7 @@ const SimulationCard = ({ simulation, onClick }: SimulationCardProps) => {
       <CardContent className="pb-2">
         <p className="mb-2 line-clamp-2 text-sm font-medium">"{simulation.task}"</p>
         <div className="text-sm text-muted-foreground truncate">
-          <span className="inline-block">{new URL(simulation.webUrl).hostname}</span>
+          <span className="inline-block">{getHostname(simulation.webUrl)}</span>
         </div>
         <div className="flex items-center mt-2 text-xs text-muted-foreground">
           <Clock className="h-3 w-3 mr-1" />
