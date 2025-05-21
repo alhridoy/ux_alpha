@@ -3,7 +3,10 @@ import React, { useState } from 'react';
 import { AgentAction } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronUp, ChevronDown, PlayCircle, Laptop } from 'lucide-react';
+import { ChevronUp, ChevronDown, PlayCircle, Laptop, ExternalLink } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
+import { backendService } from '@/services/backendService';
 
 interface BrowserAutomationViewProps {
   actions: AgentAction[];
@@ -12,6 +15,42 @@ interface BrowserAutomationViewProps {
 
 const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, webUrl }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [automationType, setAutomationType] = useState<'selenium' | 'stagehand'>('selenium');
+  const [isConfiguring, setIsConfiguring] = useState(false);
+
+  React.useEffect(() => {
+    // Get the current browser automation type when component mounts
+    const getBrowserType = async () => {
+      const type = await backendService.getBrowserAutomationType();
+      if (type) {
+        setAutomationType(type);
+      }
+    };
+    
+    getBrowserType();
+  }, []);
+
+  const handleAutomationTypeChange = async (value: string) => {
+    if (value !== 'selenium' && value !== 'stagehand') return;
+    
+    setIsConfiguring(true);
+    
+    try {
+      const success = await backendService.configureBrowserAutomation(value);
+      
+      if (success) {
+        setAutomationType(value);
+        toast.success(`Browser automation set to ${value}`);
+      } else {
+        toast.error(`Failed to set browser automation to ${value}`);
+      }
+    } catch (error) {
+      console.error('Error setting browser automation:', error);
+      toast.error('An error occurred while configuring browser automation');
+    } finally {
+      setIsConfiguring(false);
+    }
+  };
 
   return (
     <Card className="mb-6">
@@ -22,6 +61,20 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
             <CardTitle>Browser Automation</CardTitle>
           </div>
           <div className="flex items-center gap-2">
+            <Select
+              value={automationType}
+              onValueChange={handleAutomationTypeChange}
+              disabled={isConfiguring}
+            >
+              <SelectTrigger className="w-[160px] h-8">
+                <SelectValue placeholder="Select engine" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="selenium">Selenium</SelectItem>
+                <SelectItem value="stagehand">Stagehand (AI)</SelectItem>
+              </SelectContent>
+            </Select>
+            
             <Button 
               variant="ghost" 
               size="sm" 
@@ -67,7 +120,20 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
               <div className="text-center text-muted-foreground">
                 <Laptop className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
                 <p>Browser view will appear here during live simulations</p>
-                <p className="text-sm">Set up browser automation in settings</p>
+                <p className="text-sm">Using {automationType === 'stagehand' ? 'Stagehand (AI-powered)' : 'Selenium'} for automation</p>
+                {automationType === 'stagehand' && (
+                  <div className="mt-3">
+                    <a 
+                      href="https://docs.stagehand.dev" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs flex items-center justify-center gap-1 text-uxagent-purple hover:underline"
+                    >
+                      Learn more about Stagehand
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </div>

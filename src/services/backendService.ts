@@ -1,4 +1,3 @@
-
 import { AgentAction, Persona, SimulationResult } from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -193,6 +192,42 @@ export class BackendService {
       return data.response;
     } catch (error) {
       console.error('Error interviewing agent:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Configure browser automation type
+   * @param type - The automation type ('selenium' or 'stagehand')
+   */
+  async configureBrowserAutomation(type: 'selenium' | 'stagehand'): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/config/browser`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type }),
+      });
+      
+      const data = await response.json();
+      return data.success === true;
+    } catch (error) {
+      console.error('Error configuring browser automation:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Get the current browser automation configuration
+   */
+  async getBrowserAutomationType(): Promise<'selenium' | 'stagehand' | null> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/config/browser`);
+      const data = await response.json();
+      return data.type || null;
+    } catch (error) {
+      console.error('Error getting browser automation type:', error);
       return null;
     }
   }
