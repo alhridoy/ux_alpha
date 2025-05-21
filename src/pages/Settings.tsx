@@ -1,15 +1,93 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Laptop, Server } from 'lucide-react';
 import ApiKeyConfig from '@/components/settings/ApiKeyConfig';
+import { toast } from 'sonner';
+import { backendService } from '@/services/backendService';
+import { useQuery } from '@tanstack/react-query';
 
 const Settings = () => {
+  const [stagehandApiKey, setStagehandApiKey] = useState<string>('');
+  const [automationType, setAutomationType] = useState<'selenium' | 'stagehand'>('selenium');
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  
+  // Query to get current browser automation type
+  const { data: browserAutomationType, isLoading: isLoadingAutomationType, refetch: refetchAutomationType } = useQuery({
+    queryKey: ['browserAutomationType'],
+    queryFn: async () => {
+      return await backendService.getBrowserAutomationType();
+    }
+  });
+  
+  // Query to check if Stagehand is configured
+  const { data: isStagehandConfigured, isLoading: isCheckingStagehand, refetch: refetchStagehand } = useQuery({
+    queryKey: ['stagehandConfig'],
+    queryFn: async () => {
+      return await backendService.isStagehandConfigured();
+    }
+  });
+  
+  // Update local state when data loads
+  useEffect(() => {
+    if (browserAutomationType) {
+      setAutomationType(browserAutomationType);
+    }
+  }, [browserAutomationType]);
+  
+  const handleAutomationTypeChange = async (type: 'selenium' | 'stagehand') => {
+    setIsSaving(true);
+    
+    try {
+      const success = await backendService.configureBrowserAutomation(type);
+      
+      if (success) {
+        setAutomationType(type);
+        toast.success(`Browser automation set to ${type}`);
+        refetchAutomationType();
+      } else {
+        toast.error('Failed to update browser automation type');
+      }
+    } catch (error) {
+      console.error('Error configuring browser automation:', error);
+      toast.error('An error occurred while configuring browser automation');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  const handleSaveStagehandKey = async () => {
+    if (!stagehandApiKey.trim()) {
+      toast.error('Please enter a valid Stagehand API key');
+      return;
+    }
+    
+    setIsSaving(true);
+    
+    try {
+      const success = await backendService.setStagehandApiKey(stagehandApiKey);
+      
+      if (success) {
+        toast.success('Stagehand API key saved successfully');
+        setStagehandApiKey(''); // Clear for security
+        refetchStagehand();
+      } else {
+        toast.error('Failed to save Stagehand API key');
+      }
+    } catch (error) {
+      console.error('Error saving Stagehand API key:', error);
+      toast.error('An error occurred while saving the Stagehand API key');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="animate-fade-in">
@@ -29,6 +107,46 @@ const Settings = () => {
           <TabsContent value="api-keys">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <ApiKeyConfig />
+              
+              {automationType === 'stagehand' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Stagehand Configuration</CardTitle>
+                    <CardDescription>
+                      Configure Stagehand for cloud-based browser automation
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Input
+                          type="password"
+                          placeholder="Enter your Stagehand API key"
+                          value={stagehandApiKey}
+                          onChange={(e) => setStagehandApiKey(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Get your API key from stagehand.dev
+                        </p>
+                      </div>
+                      
+                      {isStagehandConfigured && (
+                        <div className="p-2 bg-green-50 text-green-700 rounded-md text-sm">
+                          ✓ Stagehand API key is configured
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-between">
+                    <Button variant="outline" onClick={() => setStagehandApiKey('')} disabled={isSaving}>
+                      Clear
+                    </Button>
+                    <Button onClick={handleSaveStagehandKey} disabled={isSaving || !stagehandApiKey.trim()}>
+                      {isSaving ? 'Saving...' : 'Save API Key'}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              )}
             </div>
           </TabsContent>
           
@@ -45,81 +163,40 @@ const Settings = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between space-x-2">
-                    <Label htmlFor="automation-enabled" className="flex flex-col space-y-1">
-                      <span>Enable Browser Automation</span>
-                      <span className="font-normal text-xs text-muted-foreground">
-                        Allow UXAgent to control browsers for simulations
-                      </span>
-                    </Label>
-                    <Switch id="automation-enabled" />
-                  </div>
-                  
-                  <div className="flex items-center justify-between space-x-2">
-                    <Label htmlFor="headless-mode" className="flex flex-col space-y-1">
-                      <span>Headless Mode</span>
-                      <span className="font-normal text-xs text-muted-foreground">
-                        Run browsers in the background without UI
-                      </span>
-                    </Label>
-                    <Switch id="headless-mode" />
-                  </div>
-                  
-                  <div className="flex items-center justify-between space-x-2">
-                    <Label htmlFor="record-screenshots" className="flex flex-col space-y-1">
-                      <span>Record Screenshots</span>
-                      <span className="font-normal text-xs text-muted-foreground">
-                        Capture screenshots at each step
-                      </span>
-                    </Label>
-                    <Switch id="record-screenshots" />
+                  <div className="flex flex-col space-y-4">
+                    <label className="text-sm font-medium">Automation Type</label>
+                    <div className="flex gap-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="selenium"
+                          name="automationType"
+                          checked={automationType === 'selenium'}
+                          onChange={() => handleAutomationTypeChange('selenium')}
+                          className="rounded text-uxagent-purple"
+                        />
+                        <Label htmlFor="selenium">Selenium (Local)</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="radio"
+                          id="stagehand"
+                          name="automationType"
+                          checked={automationType === 'stagehand'}
+                          onChange={() => handleAutomationTypeChange('stagehand')}
+                          className="rounded text-uxagent-purple"
+                        />
+                        <Label htmlFor="stagehand">Stagehand (Cloud)</Label>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter>
                   <p className="text-sm text-muted-foreground">
-                    Browser automation requires Puppeteer or Playwright to be installed on your server.
+                    {automationType === 'selenium' 
+                      ? 'Selenium requires Chrome/Firefox and WebDriver to be installed locally.' 
+                      : 'Stagehand offers cloud-based browser automation without local setup.'}
                   </p>
-                </CardFooter>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Server className="h-5 w-5 text-uxagent-purple" />
-                    <CardTitle>Automation Server</CardTitle>
-                  </div>
-                  <CardDescription>
-                    Connect to a server that can run browser automation
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid w-full items-center gap-1.5">
-                    <Label htmlFor="server-url">Server URL</Label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        id="server-url"
-                        placeholder="https://your-automation-server.com"
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid w-full items-center gap-1.5">
-                    <Label htmlFor="api-key">API Key (if required)</Label>
-                    <div className="flex gap-2">
-                      <input
-                        type="password"
-                        id="api-key"
-                        placeholder="••••••••••••••••"
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button variant="outline">Test Connection</Button>
-                  <Button className="bg-uxagent-purple hover:bg-uxagent-dark-purple">Save Configuration</Button>
                 </CardFooter>
               </Card>
             </div>
