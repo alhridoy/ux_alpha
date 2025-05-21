@@ -7,6 +7,7 @@ import { ChevronUp, ChevronDown, PlayCircle, Laptop, ExternalLink, Key } from 'l
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { backendService } from '@/services/backendService';
+import { stagehandConnector } from '@/services/stagehandConnector';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -33,7 +34,7 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
       }
       
       // Check if Stagehand is configured
-      const stagehandConfigured = await backendService.isStagehandConfigured();
+      const stagehandConfigured = await stagehandConnector.isConfigured();
       setIsStagehandConfigured(stagehandConfigured);
     };
     
@@ -77,10 +78,10 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
     setIsSubmittingKey(true);
     
     try {
-      const success = await backendService.setStagehandApiKey(apiKey);
+      // Use the stagehandConnector to configure the API key
+      const success = await stagehandConnector.configure(apiKey);
       
       if (success) {
-        toast.success('Stagehand API key configured successfully');
         setIsStagehandConfigured(true);
         setIsApiKeyDialogOpen(false);
         
@@ -90,8 +91,6 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
           setAutomationType('stagehand');
           toast.success('Browser automation set to Stagehand');
         }
-      } else {
-        toast.error('Failed to configure Stagehand API key');
       }
     } catch (error) {
       console.error('Error configuring Stagehand API key:', error);
@@ -99,6 +98,24 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
     } finally {
       setIsSubmittingKey(false);
       setApiKey('');
+    }
+  };
+
+  // Helper function to describe action type
+  const getActionTypeDescription = (action: AgentAction) => {
+    switch (action.type) {
+      case 'click':
+        return 'Click';
+      case 'input':
+        return 'Type text';
+      case 'scroll':
+        return 'Scroll';
+      case 'navigate':
+        return 'Navigate';
+      case 'wait':
+        return 'Wait';
+      default:
+        return action.type;
     }
   };
 
@@ -174,6 +191,9 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
                   <p className="text-sm">Using {automationType === 'stagehand' ? 'Stagehand (AI-powered)' : 'Selenium'} for automation</p>
                   {automationType === 'stagehand' && (
                     <div className="mt-3">
+                      <p className="text-xs text-uxagent-purple mb-1">
+                        Stagehand uses its own AI to handle browser interactions
+                      </p>
                       <a 
                         href="https://docs.stagehand.dev" 
                         target="_blank" 
@@ -203,6 +223,9 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
             <div className="bg-white border rounded-md">
               <div className="flex justify-between items-center p-3 border-b">
                 <h3 className="font-semibold">Action Log</h3>
+                <div className="text-xs text-muted-foreground">
+                  {automationType === 'stagehand' ? 'Using Stagehand observe + act pattern' : 'Using Selenium WebDriver'}
+                </div>
               </div>
               <div className="p-3 space-y-3 max-h-[300px] overflow-y-auto">
                 {actions.map((action, index) => (
@@ -218,11 +241,10 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
                         <p className="text-sm">
                           <span className="font-medium">Step {index + 1}:</span> {action.reasoning}
                         </p>
-                        {action.target && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            Target: <span className="font-mono">{action.target}</span>
-                          </p>
-                        )}
+                        <p className="text-xs text-gray-500 mt-1">
+                          Action: <span className="font-medium">{getActionTypeDescription(action)}</span>
+                          {action.target && <> on <span className="font-mono">{action.target}</span></>}
+                        </p>
                         {action.value && action.type === "input" && (
                           <p className="text-xs text-gray-500 mt-1">
                             Input: <span className="font-mono">{action.value}</span>
@@ -262,7 +284,7 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
               className="font-mono"
             />
             <p className="text-xs text-muted-foreground mt-2">
-              Stagehand is a goated tool for browser automation that uses AI to interact with web pages in a more natural way.
+              Stagehand is an advanced tool for browser automation that uses AI to interact with web pages in a more natural way.
             </p>
           </div>
 
