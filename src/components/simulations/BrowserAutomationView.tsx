@@ -9,13 +9,21 @@ import { backendService } from '@/services/backendService';
 import { stagehandConnector } from '@/services/stagehandConnector';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import LiveBrowserView from './LiveBrowserView';
 
 interface BrowserAutomationViewProps {
   actions: AgentAction[];
   webUrl: string;
+  simulationId?: string;
+  isLiveSimulation?: boolean;
 }
 
-const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, webUrl }) => {
+const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({
+  actions,
+  webUrl,
+  simulationId = '',
+  isLiveSimulation = false
+}) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [isStagehandConfigured, setIsStagehandConfigured] = useState(false);
@@ -33,7 +41,7 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
         console.error('Error checking Stagehand configuration:', error);
       }
     };
-    
+
     checkStagehandConfig();
   }, []);
 
@@ -42,13 +50,13 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
       toast.error('Please enter a valid API key');
       return;
     }
-    
+
     setIsSubmittingKey(true);
-    
+
     try {
       // Use the stagehandConnector to configure the API key
       const success = await stagehandConnector.configure(apiKey);
-      
+
       if (success) {
         setIsStagehandConfigured(true);
         setIsApiKeyDialogOpen(false);
@@ -94,10 +102,10 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
               <div className="text-sm font-medium text-uxagent-purple">
                 Using Stagehand AI
               </div>
-              
-              <Button 
-                variant="ghost" 
-                size="sm" 
+
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className="text-sm text-uxagent-purple hover:text-uxagent-dark-purple hover:bg-uxagent-light-purple/20"
               >
@@ -136,37 +144,35 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
                   <span className="text-xs">Open Full Trace Player</span>
                 </Button>
               </div>
-              <div className="bg-white border rounded-md h-[250px] flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <Laptop className="h-12 w-12 mx-auto mb-2 text-muted-foreground/50" />
-                  <p>Browser view will appear here during live simulations</p>
-                  <p className="text-sm">Using Stagehand AI-powered browser automation</p>
-                  <div className="mt-3">
-                    <p className="text-xs text-uxagent-purple mb-1">
-                      Stagehand uses its own AI to handle browser interactions
-                    </p>
-                    <a 
-                      href="https://docs.stagehand.dev" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-xs flex items-center justify-center gap-1 text-uxagent-purple hover:underline"
-                    >
-                      Learn more about Stagehand
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                    {!isStagehandConfigured && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => setIsApiKeyDialogOpen(true)}
-                        className="mt-2"
-                      >
-                        <Key className="h-3 w-3 mr-1" />
-                        Configure Stagehand API Key
-                      </Button>
-                    )}
-                  </div>
-                </div>
+              <LiveBrowserView
+                simulationId={simulationId}
+                isActive={isLiveSimulation || simulationId !== ''}
+              />
+
+              <div className="mt-3 text-center">
+                <p className="text-xs text-uxagent-purple mb-1">
+                  Stagehand uses its own AI to handle browser interactions
+                </p>
+                <a
+                  href="https://docs.stagehand.dev"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs flex items-center justify-center gap-1 text-uxagent-purple hover:underline"
+                >
+                  Learn more about Stagehand
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+                {!isStagehandConfigured && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsApiKeyDialogOpen(true)}
+                    className="mt-2"
+                  >
+                    <Key className="h-3 w-3 mr-1" />
+                    Configure Stagehand API Key
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -179,8 +185,8 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
               </div>
               <div className="p-3 space-y-3 max-h-[300px] overflow-y-auto">
                 {actions.map((action, index) => (
-                  <div 
-                    key={action.id} 
+                  <div
+                    key={action.id}
                     className="p-3 rounded-md bg-slate-50 border"
                   >
                     <div className="flex items-start gap-3">
@@ -228,7 +234,7 @@ const BrowserAutomationView: React.FC<BrowserAutomationViewProps> = ({ actions, 
 
           <div className="py-4">
             <Input
-              placeholder="sk-stagehand-xxxxxxxxxxx" 
+              placeholder="sk-stagehand-xxxxxxxxxxx"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               className="font-mono"

@@ -1,34 +1,43 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Filter, UserPlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { samplePersonas } from '@/data/sampleData';
 import { Persona } from '@/types';
 import GeneratePersonaModal from '@/components/personas/GeneratePersonaModal';
+import { usePersonas } from '@/contexts/PersonasContext';
 
 const Personas = () => {
+  const navigate = useNavigate();
+  const { personas, addPersonas } = usePersonas();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
-  const [personas, setPersonas] = useState<Persona[]>(samplePersonas);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
-  
-  const filteredPersonas = personas.filter((persona) => 
+
+  const handleRunSimulation = () => {
+    if (selectedPersona) {
+      // Navigate to the simulations page with the selected persona
+      navigate('/simulations', { state: { selectedPersona } });
+    }
+  };
+
+  const filteredPersonas = personas.filter((persona) =>
     persona.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     persona.occupation.toLowerCase().includes(searchTerm.toLowerCase()) ||
     persona.techExperience.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handlePersonasGenerated = (newPersonas: Persona[]) => {
-    setPersonas([...personas, ...newPersonas]);
+    addPersonas(newPersonas);
     if (newPersonas.length > 0) {
       setSelectedPersona(newPersonas[0]);
     }
   };
-  
+
   return (
     <Layout>
       <div className="animate-fade-in">
@@ -39,7 +48,7 @@ const Personas = () => {
               Create and manage virtual users with diverse characteristics
             </p>
           </div>
-          <Button 
+          <Button
             className="bg-uxagent-purple hover:bg-uxagent-dark-purple"
             onClick={() => setIsGenerateModalOpen(true)}
           >
@@ -47,7 +56,7 @@ const Personas = () => {
             New Persona
           </Button>
         </div>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
             <Card>
@@ -56,11 +65,11 @@ const Personas = () => {
                 <CardDescription>Select a persona to view details</CardDescription>
                 <div className="relative mt-2">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search personas..." 
+                  <Input
+                    placeholder="Search personas..."
                     className="pl-8"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)} 
+                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
               </CardHeader>
@@ -72,16 +81,16 @@ const Personas = () => {
                     </p>
                   ) : (
                     filteredPersonas.map((persona) => (
-                      <div 
+                      <div
                         key={persona.id}
                         className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${selectedPersona?.id === persona.id ? 'bg-uxagent-light-purple' : 'hover:bg-muted'}`}
                         onClick={() => setSelectedPersona(persona)}
                       >
                         <div className="h-10 w-10 rounded-full overflow-hidden flex-shrink-0 mr-3">
-                          <img 
-                            src={`${persona.profileImage}?w=80&h=80&fit=crop&crop=faces&auto=format`} 
+                          <img
+                            src={`${persona.profileImage}?w=80&h=80&fit=crop&crop=faces&auto=format`}
                             alt={persona.name}
-                            className="h-full w-full object-cover" 
+                            className="h-full w-full object-cover"
                           />
                         </div>
                         <div>
@@ -98,8 +107,8 @@ const Personas = () => {
                   <Filter className="h-3.5 w-3.5 mr-1.5" />
                   Filter
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => setIsGenerateModalOpen(true)}
                 >
@@ -109,17 +118,17 @@ const Personas = () => {
               </CardFooter>
             </Card>
           </div>
-          
+
           <div className="lg:col-span-2">
             {selectedPersona ? (
               <Card className="animate-fade-in">
                 <CardHeader className="pb-3">
                   <div className="flex items-center">
                     <div className="h-16 w-16 rounded-full overflow-hidden mr-4">
-                      <img 
+                      <img
                         src={`${selectedPersona.profileImage}?w=160&h=160&fit=crop&crop=faces&auto=format`}
                         alt={selectedPersona.name}
-                        className="h-full w-full object-cover" 
+                        className="h-full w-full object-cover"
                       />
                     </div>
                     <div>
@@ -135,7 +144,7 @@ const Personas = () => {
                     </Badge>
                   </div>
                 </CardHeader>
-                
+
                 <CardContent className="space-y-6">
                   <div>
                     <h3 className="font-semibold mb-2 text-sm text-muted-foreground">TRAITS</h3>
@@ -147,7 +156,7 @@ const Personas = () => {
                       ))}
                     </div>
                   </div>
-                  
+
                   <div>
                     <h3 className="font-semibold mb-2 text-sm text-muted-foreground">GOALS</h3>
                     <ul className="list-disc pl-5 space-y-1">
@@ -156,7 +165,7 @@ const Personas = () => {
                       ))}
                     </ul>
                   </div>
-                  
+
                   <div>
                     <h3 className="font-semibold mb-2 text-sm text-muted-foreground">PAIN POINTS</h3>
                     <ul className="list-disc pl-5 space-y-1">
@@ -166,9 +175,12 @@ const Personas = () => {
                     </ul>
                   </div>
                 </CardContent>
-                
+
                 <CardFooter className="border-t pt-4 flex flex-col sm:flex-row gap-2">
-                  <Button className="bg-uxagent-purple hover:bg-uxagent-dark-purple sm:flex-1">
+                  <Button
+                    className="bg-uxagent-purple hover:bg-uxagent-dark-purple sm:flex-1"
+                    onClick={handleRunSimulation}
+                  >
                     Run Simulation with This Persona
                   </Button>
                   <Button variant="outline" className="sm:flex-1">
@@ -195,10 +207,10 @@ const Personas = () => {
         </div>
       </div>
 
-      <GeneratePersonaModal 
-        open={isGenerateModalOpen} 
-        onOpenChange={setIsGenerateModalOpen} 
-        onPersonasGenerated={handlePersonasGenerated} 
+      <GeneratePersonaModal
+        open={isGenerateModalOpen}
+        onOpenChange={setIsGenerateModalOpen}
+        onPersonasGenerated={handlePersonasGenerated}
       />
     </Layout>
   );

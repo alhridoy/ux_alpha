@@ -1,73 +1,144 @@
-# Welcome to your Lovable project
+# UX Agent Simulator
 
-## Project info
+A simulation framework for UX research using AI agents with a two-loop architecture.
 
-**URL**: https://lovable.dev/projects/eddf4a0b-36bd-4216-8902-88195387276b
+## Overview
 
-## How can I edit this code?
+The UX Agent Simulator is a powerful tool for UX researchers to simulate user interactions with websites and applications. It uses a two-loop architecture with LLMs to create realistic user simulations that can help identify usability issues and gather insights.
 
-There are several ways of editing your application.
+## Key Features
 
-**Use Lovable**
+- **Two-Loop Architecture**: Fast loop (Perception → Planning → Action) and Slow loop (Reflection, Wonder) for realistic user simulation
+- **Memory Stream**: Sophisticated memory system with importance, relevance, and recency scoring
+- **Stagehand Integration**: Universal Browser Controller using Stagehand for robust web interaction
+- **Simulation Recording & Replay**: Record and replay user sessions for analysis
+- **Agent Interview Interface**: Interview simulated users about their experience
+- **Persona Generation**: Create diverse user personas for testing
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/eddf4a0b-36bd-4216-8902-88195387276b) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Python 3.8+
+- OpenAI API key (for GPT-4o)
+- Browserbase API key (optional, for cloud-based browser automation)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/alhridoy/ux_alpha.git
+   cd ux_alpha
+   ```
 
-Follow these steps:
+2. Run the setup script:
+   ```bash
+   chmod +x setup.sh
+   ./setup.sh
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+3. Update your API keys in the `.env` file:
+   ```
+   OPENAI_API_KEY=your_openai_api_key_here
+   BROWSERBASE_API_KEY=your_browserbase_api_key_here (optional)
+   BROWSERBASE_PROJECT_ID=your_browserbase_project_id_here (optional)
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Running the Demo
 
-# Step 3: Install the necessary dependencies.
-npm i
+Try the Stagehand demo to see the Universal Browser Controller in action:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+python examples/stagehand_demo.py
 ```
 
-**Edit a file directly in GitHub**
+### Starting the API Server
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Start the API server to use the full UX Agent Simulator:
 
-**Use GitHub Codespaces**
+```bash
+python src/backend/api.py
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The API will be available at: http://localhost:8000
 
-## What technologies are used for this project?
+## Using Stagehand as a Universal Browser Controller
 
-This project is built with:
+Stagehand is a powerful browser automation framework that serves as the Universal Browser Controller in the UX Agent Simulator. It provides a natural language interface to browser automation, making it perfect for AI agent interactions.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Key Capabilities
 
-## How can I deploy this project?
+1. **Observe-Act-Extract Pattern**:
+   - **Observe**: Find potential actions on a page
+   - **Act**: Execute actions based on natural language instructions
+   - **Extract**: Retrieve structured data from web pages
 
-Simply open [Lovable](https://lovable.dev/projects/eddf4a0b-36bd-4216-8902-88195387276b) and click on Share -> Publish.
+2. **Action Caching**: Reduce redundant LLM calls by caching actions
 
-## Can I connect a custom domain to my Lovable project?
+3. **Computer Use Agents**: Handle complex tasks with specialized agents
 
-Yes, you can!
+4. **Browserbase Integration**: Optional cloud-based browser automation
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Example Usage
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+```python
+from src.backend.universal_browser_connector import UniversalBrowserConnector
+
+# Initialize the browser connector
+browser = UniversalBrowserConnector(
+    headless=False,
+    stagehand_api_key="your_openai_api_key_here"
+)
+
+# Navigate to a website
+browser.navigate("https://example.com")
+
+# Observe the page
+observations = browser.observe("Find all clickable elements on this page")
+
+# Act on the page
+browser.act("Click on the 'About' link")
+
+# Extract data from the page
+data = browser.extract_data(
+    "Extract the main heading and paragraph text",
+    {
+        "type": "object",
+        "properties": {
+            "heading": {"type": "string"},
+            "paragraph": {"type": "string"}
+        }
+    }
+)
+
+# Execute a complex task
+browser.execute_complex_task(
+    "Find information about the company and summarize it"
+)
+
+# Close the browser
+browser.close()
+```
+
+## Architecture
+
+The UX Agent Simulator follows a two-loop architecture:
+
+### Fast Loop
+
+- **Perception Module**: Observes the current web page
+- **Planning Module**: Creates and updates plans based on observations
+- **Action Module**: Translates plans into specific actions
+
+### Slow Loop
+
+- **Reflection Module**: Generates insights based on recent experiences
+- **Wonder Module**: Creates spontaneous thoughts for more realistic simulation
+
+### Memory Stream
+
+The Memory Stream is the central component that stores and retrieves memories based on:
+
+- **Importance**: How important a memory is to the agent's goals
+- **Relevance**: How relevant a memory is to the current context
+- **Recency**: How recent a memory is

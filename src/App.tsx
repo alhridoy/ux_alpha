@@ -13,6 +13,7 @@ import Interviews from './pages/Interviews';
 import { Toaster } from './components/ui/sonner';
 import { ThemeProvider } from './components/ui/theme-provider';
 import { SetupService } from './services/setupService';
+import { PersonasProvider } from './contexts/PersonasContext';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -32,7 +33,7 @@ function App() {
       try {
         // Replace this with your actual API key if provided
         const openaiKey = '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';
-        
+
         if (openaiKey) {
           await SetupService.setupOpenAIKey(openaiKey);
         }
@@ -53,17 +54,19 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="uxagent-theme">
-        <Router>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/personas" element={<Personas />} />
-            <Route path="/simulations" element={<Simulations />} />
-            <Route path="/interviews" element={<Interviews />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </Router>
+        <PersonasProvider>
+          <Router>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/personas" element={<Personas />} />
+              <Route path="/simulations" element={<Simulations />} />
+              <Route path="/interviews" element={<Interviews />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <Toaster />
+          </Router>
+        </PersonasProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

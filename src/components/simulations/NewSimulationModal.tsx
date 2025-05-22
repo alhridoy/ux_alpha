@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Loader2, Globe, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
+import { useLocation } from 'react-router-dom';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -30,15 +31,20 @@ type SimulationFormValues = {
 };
 
 const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated }: NewSimulationModalProps) => {
+  const location = useLocation();
   const [isRunning, setIsRunning] = useState(false);
   const [automationType, setAutomationType] = useState<'selenium' | 'stagehand' | null>(null);
   const [isStagehandConfigured, setIsStagehandConfigured] = useState(false);
   const [activeTab, setActiveTab] = useState<'simulation' | 'extraction'>('simulation');
   const [webUrl, setWebUrl] = useState('');
-  
+
+  // Get the selected persona from location state if available
+  const state = location.state as { selectedPersona?: Persona } | null;
+  const selectedPersona = state?.selectedPersona;
+
   const form = useForm<SimulationFormValues>({
     defaultValues: {
-      personaId: '',
+      personaId: selectedPersona?.id || '',
       webUrl: '',
       task: '',
     }
@@ -49,17 +55,17 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
       const checkAutomationType = async () => {
         const type = await backendService.getBrowserAutomationType();
         setAutomationType(type);
-        
+
         if (type === 'stagehand') {
           const stagehandConfigured = await backendService.isStagehandConfigured();
           setIsStagehandConfigured(stagehandConfigured);
-          
+
           if (!stagehandConfigured) {
             toast.warning("Stagehand is selected but not configured. The simulation may not run properly.");
           }
         }
       };
-      
+
       checkAutomationType();
     }
   }, [open]);
@@ -67,18 +73,18 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
   const handleSubmit = async (data: SimulationFormValues) => {
     // Update shared webUrl
     setWebUrl(data.webUrl);
-    
+
     const selectedPersona = personas.find(p => p.id === data.personaId);
     if (!selectedPersona) {
       toast.error("Please select a persona first");
       return;
     }
-    
+
     setIsRunning(true);
     try {
       // Check if we should use the backend or the mock implementation
       const backendConfigured = await backendService.getConfiguredProviders();
-      
+
       if (backendConfigured.length > 0) {
         // Use the backend service to run the simulation
         const simulationId = await backendService.startSimulation(
@@ -86,19 +92,19 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
           data.webUrl,
           data.task
         );
-        
+
         if (!simulationId) {
           toast.error("Failed to start simulation");
           return;
         }
-        
+
         // Poll for simulation status
         let completed = false;
         let result = null;
-        
+
         while (!completed) {
           const status = await backendService.getSimulationStatus(simulationId);
-          
+
           if (status.status === "completed") {
             completed = true;
             result = await backendService.getSimulationResult(simulationId);
@@ -107,11 +113,11 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
             setIsRunning(false);
             return;
           }
-          
+
           // Wait before polling again
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
-        
+
         if (result) {
           onSimulationCreated(result);
           toast.success("Simulation completed successfully!");
@@ -121,7 +127,7 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
         // Use the mock implementation from our service
         // In a real implementation, this would call your LLM Agent API
         await new Promise(resolve => setTimeout(resolve, 3000));
-        
+
         // Create a mock simulation result with automation type info
         const mockSimulation: SimulationResult = {
           id: uuidv4(),
@@ -143,15 +149,15 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
               timestamp: Date.now() + 2000,
               type: 'click',
               target: automationType === 'stagehand' ? 'AI identified element' : 'button_search',
-              reasoning: automationType === 'stagehand' 
-                ? 'Using Stagehand AI to identify and click the search button' 
+              reasoning: automationType === 'stagehand'
+                ? 'Using Stagehand AI to identify and click the search button'
                 : 'Looking for the search button based on its element ID'
             },
             // In a real implementation, this would contain the full action trace
           ],
           reflections: [
             `As ${selectedPersona.name}, I approached this task with my ${selectedPersona.techExperience.toLowerCase()} level of tech experience.`,
-            automationType === 'stagehand' 
+            automationType === 'stagehand'
               ? "The Stagehand AI helped me navigate the site more naturally, focusing on what elements do rather than their technical details."
               : "The website layout was intuitive, though I did struggle with finding some elements.",
           ],
@@ -163,7 +169,7 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
           ],
           timestamp: Date.now(),
         };
-        
+
         onSimulationCreated(mockSimulation);
         toast.success("Simulation completed successfully!");
         onOpenChange(false);
@@ -206,7 +212,7 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
             <TabsTrigger value="simulation">Run Simulation</TabsTrigger>
             <TabsTrigger value="extraction">Extract Data</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="simulation">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -253,9 +259,9 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
                     <FormItem>
                       <FormLabel>Website URL</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="https://example.com" 
-                          {...field} 
+                        <Input
+                          placeholder="https://example.com"
+                          {...field}
                           onChange={(e) => {
                             field.onChange(e);
                             handleWebUrlChange(e.target.value);
@@ -276,10 +282,10 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
                     <FormItem>
                       <FormLabel>Task Description</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Find and purchase a red sweater in size medium" 
+                        <Textarea
+                          placeholder="Find and purchase a red sweater in size medium"
                           className="min-h-[100px]"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormDescription>
@@ -298,9 +304,9 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
                   <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                     Cancel
                   </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={isRunning || personas.length === 0} 
+                  <Button
+                    type="submit"
+                    disabled={isRunning || personas.length === 0}
                     className="bg-uxagent-purple hover:bg-uxagent-dark-purple"
                   >
                     {isRunning ? (
@@ -319,12 +325,12 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
               </form>
             </Form>
           </TabsContent>
-          
+
           <TabsContent value="extraction">
             <div className="space-y-4">
               <FormItem>
                 <FormLabel>Website URL</FormLabel>
-                <Input 
+                <Input
                   placeholder="https://example.com"
                   value={webUrl}
                   onChange={(e) => setWebUrl(e.target.value)}
@@ -333,10 +339,10 @@ const NewSimulationModal = ({ open, onOpenChange, personas, onSimulationCreated 
                   Enter the URL of the website to extract data from
                 </FormDescription>
               </FormItem>
-              
-              <DataExtractionForm 
+
+              <DataExtractionForm
                 webUrl={webUrl}
-                onDataExtracted={handleExtractedData} 
+                onDataExtracted={handleExtractedData}
               />
             </div>
           </TabsContent>

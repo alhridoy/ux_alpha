@@ -1,14 +1,14 @@
 
 import React from 'react';
-import { 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  MousePointer, 
-  Keyboard, 
-  ArrowDownUp, 
-  Globe, 
-  FileQuestion, 
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  MousePointer,
+  Keyboard,
+  ArrowDownUp,
+  Globe,
+  FileQuestion,
   BrainCircuit,
   Eye,
   PauseCircle,
@@ -30,7 +30,7 @@ type SimulationDetailProps = {
 
 const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
   const formattedTime = formatDistanceToNow(simulation.timestamp, { addSuffix: true });
-  
+
   // Helper to get the appropriate icon for each action type
   const getActionIcon = (type: string) => {
     switch (type) {
@@ -60,7 +60,7 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   };
-  
+
   return (
     <div className="animate-fade-in space-y-6">
       <div className="flex items-center justify-between">
@@ -71,13 +71,15 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
           Export Results
         </Button>
       </div>
-      
-      {/* Add the new BrowserAutomationView component at the top */}
-      <BrowserAutomationView 
-        actions={simulation.actions} 
-        webUrl={simulation.webUrl} 
+
+      {/* Add the BrowserAutomationView component with live simulation support */}
+      <BrowserAutomationView
+        actions={simulation.actions}
+        webUrl={simulation.webUrl}
+        simulationId={simulation.id}
+        isLiveSimulation={simulation.status === "simulating" || simulation.status === "initializing"}
       />
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
           <Card>
@@ -109,29 +111,29 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
                 <h3 className="font-medium text-sm text-muted-foreground mb-2">TASK</h3>
                 <p className="text-base">"{simulation.task}"</p>
               </div>
-              
+
               <div className="mb-6">
                 <h3 className="font-medium text-sm text-muted-foreground mb-2">WEBSITE</h3>
                 <div className="flex items-center">
                   <Globe className="h-4 w-4 mr-2 text-uxagent-purple" />
-                  <a 
-                    href={simulation.webUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
+                  <a
+                    href={simulation.webUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="text-uxagent-purple hover:underline"
                   >
                     {new URL(simulation.webUrl).hostname}
                   </a>
                 </div>
               </div>
-              
+
               <Tabs defaultValue="actions" className="w-full">
                 <TabsList>
                   <TabsTrigger value="actions">Action Trace</TabsTrigger>
                   <TabsTrigger value="reflections">Reflections</TabsTrigger>
                   <TabsTrigger value="wonderings">Wonderings</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="actions" className="pt-4">
                   <div className="space-y-4">
                     {simulation.actions.map((action, index) => (
@@ -140,7 +142,7 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
                         {index < simulation.actions.length - 1 && (
                           <div className="absolute left-[11px] top-[28px] bottom-0 w-0.5 bg-muted-foreground/20" />
                         )}
-                        
+
                         <div className="flex items-start">
                           <div className="absolute left-0 bg-white p-1 rounded-full border border-muted">
                             {getActionIcon(action.type)}
@@ -171,7 +173,7 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
                     ))}
                   </div>
                 </TabsContent>
-                
+
                 <TabsContent value="reflections" className="pt-4">
                   <div className="space-y-4">
                     {simulation.reflections.map((reflection, index) => (
@@ -185,7 +187,7 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
                     ))}
                   </div>
                 </TabsContent>
-                
+
                 <TabsContent value="wonderings" className="pt-4">
                   <div className="space-y-4">
                     {simulation.wonderings.map((wondering, index) => (
@@ -203,7 +205,7 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
             </CardContent>
           </Card>
         </div>
-        
+
         <div>
           <Card>
             <CardHeader>
@@ -212,10 +214,10 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
             <CardContent>
               <div className="flex flex-col items-center mb-4">
                 <div className="h-20 w-20 rounded-full overflow-hidden mb-3">
-                  <img 
+                  <img
                     src={`${simulation.persona.profileImage}?w=160&h=160&fit=crop&crop=faces&auto=format`}
                     alt={simulation.persona.name}
-                    className="h-full w-full object-cover" 
+                    className="h-full w-full object-cover"
                   />
                 </div>
                 <h3 className="text-lg font-medium">{simulation.persona.name}</h3>
@@ -226,9 +228,9 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
                   {simulation.persona.occupation}
                 </p>
               </div>
-              
+
               <Separator className="my-4" />
-              
+
               <div className="space-y-4">
                 <div>
                   <h3 className="font-semibold mb-2 text-sm text-muted-foreground">TECH EXPERIENCE</h3>
@@ -236,7 +238,7 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
                     {simulation.persona.techExperience}
                   </Badge>
                 </div>
-                
+
                 <div>
                   <h3 className="font-semibold mb-2 text-sm text-muted-foreground">TRAITS</h3>
                   <div className="flex flex-wrap gap-2">
@@ -247,7 +249,7 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
                     ))}
                   </div>
                 </div>
-                
+
                 <div>
                   <h3 className="font-semibold mb-2 text-sm text-muted-foreground">GOALS</h3>
                   <ul className="list-disc pl-5 space-y-1">
@@ -256,7 +258,7 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
                     ))}
                   </ul>
                 </div>
-                
+
                 <div>
                   <h3 className="font-semibold mb-2 text-sm text-muted-foreground">PAIN POINTS</h3>
                   <ul className="list-disc pl-5 space-y-1">
@@ -266,9 +268,9 @@ const SimulationDetail = ({ simulation, onBack }: SimulationDetailProps) => {
                   </ul>
                 </div>
               </div>
-              
+
               <Separator className="my-4" />
-              
+
               <Button variant="outline" className="w-full">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Interview {simulation.persona.name.split(' ')[0]}
